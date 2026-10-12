@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tra Cứu Vận Đơn - GHN Express</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .ghn-orange { background-color: #f36f21; }
+        .ghn-orange-text { color: #f36f21; }
+        .ghn-orange:hover { background-color: #d95e19; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen flex flex-col justify-between">
+
+    <!-- Header tra cứu -->
+    <header class="bg-white shadow-sm border-b py-4 px-6">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <span class="text-2xl font-black ghn-orange-text tracking-wider">GHN</span>
+                <span class="text-sm font-semibold text-gray-600 border-l pl-2">Hệ Thống Tra Cứu Hành Trình</span>
+            </div>
+            <a href="index.html" class="text-sm text-orange-600 hover:underline"><i class="fa-solid fa-arrow-left mr-1"></i>Đăng nhập / Về ứng dụng</a>
+        </div>
+    </header>
+
+    <!-- Khung tìm kiếm chính -->
+    <main class="max-w-2xl w-full mx-auto p-4 my-8">
+        <div class="bg-white p-8 rounded-2xl shadow-md">
+            <h1 class="text-2xl font-bold text-gray-800 text-center mb-2">Tra Cứu Đơn Hàng</h1>
+            <p class="text-gray-500 text-center text-sm mb-6">Nhập mã vận đơn để kiểm tra vị trí và lịch sử giao hàng</p>
+
+            <!-- Ô nhập mã -->
+            <div class="flex space-x-2">
+                <input type="text" id="search-code" placeholder="Nhập mã vận đơn (VD: GHN123456)..." class="flex-1 px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none uppercase font-semibold">
+                <button onclick="trackOrder()" class="px-6 py-3 ghn-orange text-white font-semibold rounded-xl shadow transition"><i class="fa-solid fa-magnifying-glass mr-1"></i>Tra Cứu</button>
+            </div>
+        </div>
+
+        <!-- Kết quả tra cứu chi tiết -->
+        <div id="result-section" class="mt-6 hidden bg-white p-8 rounded-2xl shadow-md space-y-6">
+            
+            <!-- Thông tin tổng quan -->
+            <div class="border-b pb-4 flex justify-between items-center">
+                <div>
+                    <span class="text-xs text-gray-400">Mã vận đơn:</span>
+                    <h3 id="res-code" class="text-xl font-black ghn-orange-text"></h3>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs text-gray-400">Trạng thái:</span>
+                    <div id="res-status" class="font-semibold text-xs px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-center"></div>
+                </div>
+            </div>
+
+            <!-- Chi tiết đơn -->
+            <div class="grid grid-cols-2 gap-4 text-sm bg-orange-50/50 p-4 rounded-xl border border-orange-100">
+                <div>
+                    <p class="text-gray-400 text-xs">Người nhận & SĐT:</p>
+                    <p id="res-receiver" class="font-semibold text-gray-800"></p>
+                </div>
+                <div>
+                    <p class="text-gray-400 text-xs">Sản phẩm (COD):</p>
+                    <p id="res-item" class="font-semibold text-gray-800"></p>
+                </div>
+                <div class="col-span-2 border-t border-orange-100 pt-2">
+                    <p class="text-gray-400 text-xs">Địa chỉ nhận hàng cuối cùng:</p>
+                    <p id="res-address" class="font-semibold text-gray-800"></p>
+                </div>
+            </div>
+
+            <!-- Sơ đồ hành trình thực tế -->
+            <div>
+                <h4 class="font-bold text-gray-800 mb-4 text-sm"><i class="fa-solid fa-route ghn-orange-text mr-2"></i>Lịch sử di chuyển & Vị trí chi tiết</h4>
+                <div id="res-timeline" class="space-y-6 border-l-2 border-orange-200 pl-6 ml-3 relative">
+                    <!-- Các sự kiện lịch sử sẽ đổ vào đây -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Báo lỗi không thấy đơn -->
+        <div id="error-section" class="mt-6 hidden bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl text-center text-sm">
+            <i class="fa-solid fa-circle-exclamation mr-1"></i>Không tìm thấy mã vận đơn phù hợp. Vui lòng kiểm tra lại!
+        </div>
+    </main>
+
+    <footer class="bg-white border-t py-4 text-center text-xs text-gray-400">
+        © 2026 Giao Hàng Nhanh Express - Hệ Thống Mô Phỏng
+    </footer>
+
+    <!-- LOGIC DÙNG CHUNG KEY LOCALSTORAGE ('ghn_orders') -->
+    <script>
+        function trackOrder() {
+            const codeInput = document.getElementById('search-code').value.trim().toUpperCase();
+            const resultSection = document.getElementById('result-section');
+            const errorSection = document.getElementById('error-section');
+
+            if (!codeInput) {
+                alert('Vui lòng nhập mã vận đơn!');
+                return;
+            }
+
+            // Đọc cùng Key 'ghn_orders' từ localStorage
+            const orders = JSON.parse(localStorage.getItem('ghn_orders')) || [];
+            const order = orders.find(o => o.trackingCode.toUpperCase() === codeInput);
+
+            if (!order) {
+                resultSection.classList.add('hidden');
+                errorSection.classList.remove('hidden');
+                return;
+            }
+
+            errorSection.classList.add('hidden');
+            resultSection.classList.remove('hidden');
+
+            document.getElementById('res-code').innerText = order.trackingCode;
+            document.getElementById('res-status').innerText = order.status;
+            document.getElementById('res-receiver').innerText = `${order.receiverName} (${order.receiverPhone})`;
+            document.getElementById('res-item').innerText = `${order.itemName} - Thu hộ COD: ${Number(order.cod).toLocaleString()} đ`;
+            document.getElementById('res-address').innerText = order.receiverAddress;
+
+            // Đổ dữ liệu Lịch sử & Vị trí địa chỉ
+            let timelineHtml = '';
+            if (order.history && order.history.length > 0) {
+                order.history.forEach((h, index) => {
+                    const isLatest = index === 0; // Điểm mới nhất
+                    timelineHtml += `
+                        <div class="relative">
+                            <div class="absolute -left-[31px] top-0.5 w-4 h-4 ${isLatest ? 'bg-orange-500 ring-4 ring-orange-100' : 'bg-gray-300'} rounded-full"></div>
+                            <p class="text-xs ${isLatest ? 'font-bold ghn-orange-text' : 'text-gray-400'}">${h.time}</p>
+                            <p class="text-sm font-semibold text-gray-800 mt-0.5">${h.status}</p>
+                            <p class="text-xs text-gray-600 mt-1 bg-gray-50 p-2 rounded-lg inline-block border"><i class="fa-solid fa-location-dot ghn-orange-text mr-1"></i>${h.location}</p>
+                        </div>
+                    `;
+                });
+            } else {
+                timelineHtml = `<p class="text-xs text-gray-400">Chưa có lịch sử cập nhật.</p>`;
+            }
+
+            document.getElementById('res-timeline').innerHTML = timelineHtml;
+        }
+    </script>
+</body>
+</html>
